@@ -9,7 +9,10 @@ import in.projecteka.utils.data.model.Obs;
 import in.projecteka.utils.data.model.SimpleAllergy;
 import in.projecteka.utils.data.model.SimpleCondition;
 import in.projecteka.utils.data.model.SimpleDiagnosticTest;
+import in.projecteka.utils.data.model.TargetDisease;
+import in.projecteka.utils.data.model.Vaccine;
 import lombok.SneakyThrows;
+import org.apache.commons.lang3.RandomUtils;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.AllergyIntolerance;
 import org.hl7.fhir.r4.model.Annotation;
@@ -23,6 +26,7 @@ import org.hl7.fhir.r4.model.DateTimeType;
 import org.hl7.fhir.r4.model.DiagnosticReport;
 import org.hl7.fhir.r4.model.DocumentReference;
 import org.hl7.fhir.r4.model.Encounter;
+import org.hl7.fhir.r4.model.ImmunizationRecommendation;
 import org.hl7.fhir.r4.model.Medication;
 import org.hl7.fhir.r4.model.MedicationRequest;
 import org.hl7.fhir.r4.model.Observation;
@@ -58,12 +62,16 @@ public class OPConsultationGenerator implements  DocumentGenerator {
     private Properties doctors;
     private Properties patients;
     private Properties medicationProps;
+    private Properties immunizationVaccineProps;
+    private Properties immunizationDiseaseProps;
 
     @Override
     public void init() throws Exception {
         doctors = Utils.loadFromFile("/practitioners.properties");
         patients = Utils.loadFromFile("/patients.properties");
         medicationProps = Utils.loadFromFile("/medications.properties");
+        immunizationDiseaseProps = Utils.loadFromFile("/immunization-diseases.properties");
+        immunizationVaccineProps = Utils.loadFromFile("/immunization-vaccines.properties");
     }
 
     @Override
@@ -137,7 +145,7 @@ public class OPConsultationGenerator implements  DocumentGenerator {
         Reference referenceToResource = FHIRUtils.getReferenceToResource(encounter);
         opDoc.setEncounter(referenceToResource);
 
-        generateSections(hipPrefix, jsonParser, bundle, opDoc, patientResource);
+        generateSections(hipPrefix, jsonParser, bundle, opDoc, patientResource, date);
         return bundle;
     }
 
@@ -145,7 +153,7 @@ public class OPConsultationGenerator implements  DocumentGenerator {
         return "OP Consultation Document";
     }
 
-    protected void generateSections(String hipPrefix, IParser jsonParser, Bundle bundle, Composition opDoc, Patient patientResource) {
+    protected void generateSections(String hipPrefix, IParser jsonParser, Bundle bundle, Composition opDoc, Patient patientResource, Date date) {
         createChiefComplaintsSection(bundle, opDoc, patientResource);
         createAllergiesSection(bundle, opDoc, patientResource, jsonParser);
         createMedicalHistorySection(bundle, opDoc, patientResource); //TODO
@@ -153,6 +161,7 @@ public class OPConsultationGenerator implements  DocumentGenerator {
         createObservationSection(bundle, opDoc, patientResource, jsonParser);
         createInvestigationSection(bundle, opDoc, patientResource); //TODO
         createPrescriptionSection(bundle, opDoc, patientResource);
+        createImmunizationRecordSection(bundle, opDoc, patientResource, date);
         createDocumentsSection(bundle, opDoc, patientResource, hipPrefix);
         createProcedureSection(bundle, opDoc, patientResource, hipPrefix);
         createDiagnosticReportSection(bundle, opDoc, patientResource, jsonParser, hipPrefix);
@@ -459,6 +468,21 @@ public class OPConsultationGenerator implements  DocumentGenerator {
         FHIRUtils.addToBundleEntry(bundle, medicationAllergy, true);
         section.getEntry().add(FHIRUtils.getReferenceToResource(foodAllergy));
         section.getEntry().add(FHIRUtils.getReferenceToResource(medicationAllergy));
+    }
+
+    @SneakyThrows
+    protected void createImmunizationRecordSection(Bundle bundle, Composition composition, Patient patient, Date date) {
+        Composition.SectionComponent section = composition.addSection();
+        section.setTitle("Immunization Recommendation");
+        section.setCode(FHIRUtils.getImmunizationRecommendationSectionType());
+        var vaccineIndex = RandomUtils.nextInt(1, 11);
+        var diseaseIndex = RandomUtils.nextInt(1, 10);
+        Vaccine vaccine = Vaccine.parse((String) immunizationVaccineProps.get(String.valueOf(vaccineIndex)));
+        TargetDisease targetDisease = TargetDisease.parse((String) immunizationDiseaseProps.get(String.valueOf(diseaseIndex)));
+        ImmunizationRecommendation immunizationRecommendation = FHIRUtils.getImmunizationRecommendation(vaccine, targetDisease, date);
+        immunizationRecommendation.setPatient(FHIRUtils.getReferenceToPatient(patient));
+        FHIRUtils.addToBundleEntry(bundle, immunizationRecommendation, true);
+        section.getEntry().add(FHIRUtils.getReferenceToResource(immunizationRecommendation));
     }
 
     @SneakyThrows

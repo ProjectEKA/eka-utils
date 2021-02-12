@@ -1,6 +1,7 @@
 package in.projecteka.utils.data;
 
 import in.projecteka.utils.data.model.Doctor;
+import in.projecteka.utils.data.model.TargetDisease;
 import in.projecteka.utils.data.model.Vaccine;
 import in.projecteka.utils.data.model.Medicine;
 import in.projecteka.utils.data.model.SimpleCondition;
@@ -15,12 +16,14 @@ import org.hl7.fhir.r4.model.CodeableConcept;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Condition;
 import org.hl7.fhir.r4.model.DateTimeType;
+import org.hl7.fhir.r4.model.DiagnosticReport;
 import org.hl7.fhir.r4.model.DocumentReference;
 import org.hl7.fhir.r4.model.Encounter;
 import org.hl7.fhir.r4.model.Enumerations;
 import org.hl7.fhir.r4.model.HumanName;
 import org.hl7.fhir.r4.model.Identifier;
 import org.hl7.fhir.r4.model.Immunization;
+import org.hl7.fhir.r4.model.ImmunizationRecommendation;
 import org.hl7.fhir.r4.model.Medication;
 import org.hl7.fhir.r4.model.MedicationRequest;
 import org.hl7.fhir.r4.model.Meta;
@@ -32,12 +35,14 @@ import org.hl7.fhir.r4.model.Reference;
 import org.hl7.fhir.r4.model.Resource;
 import org.hl7.fhir.r4.model.ResourceType;
 import org.hl7.fhir.r4.model.StringType;
+import org.hl7.fhir.utilities.DateTimeUtil;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
+import java.util.List;
 import java.util.Properties;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -189,6 +194,7 @@ public class FHIRUtils {
         coding.setDisplay("Chief Complaint Section");
         return type;
     }
+
     static CodeableConcept getAllergySectionType() {
         CodeableConcept type = new CodeableConcept();
         Coding coding = type.addCoding();
@@ -198,7 +204,14 @@ public class FHIRUtils {
         return type;
     }
 
-
+    static CodeableConcept getImmunizationRecommendationSectionType() {
+        CodeableConcept type = new CodeableConcept();
+        Coding coding = type.addCoding();
+        coding.setSystem(Constants.EKA_SCT_SYSTEM);
+        coding.setCode("41000179103");
+        coding.setDisplay("Immunization Recommendation");
+        return type;
+    }
 
     static void addToBundleEntry(Bundle bundle, Resource resource, boolean useIdPart) {
         String resourceType = resource.getResourceType().toString();
@@ -320,6 +333,33 @@ public class FHIRUtils {
 
         immunization.setStatus(Immunization.ImmunizationStatus.COMPLETED);
         return immunization;
+    }
+
+    static ImmunizationRecommendation getImmunizationRecommendation(Vaccine vaccine, TargetDisease targetDisease, Date date){
+        ImmunizationRecommendation immunizationRecommendation = new ImmunizationRecommendation();
+        immunizationRecommendation.setId(UUID.randomUUID().toString());
+        immunizationRecommendation.setDate(date);
+        var immunizationRecommendationComponent = immunizationRecommendation.addRecommendation();
+        immunizationRecommendationComponent.addVaccineCode(getCodeableConcept(vaccine.getCode(), vaccine.getName(), null));
+        immunizationRecommendationComponent.setTargetDisease(getCodeableConcept(targetDisease.getCode(), targetDisease.getName(), null));
+
+        var dateCriterion = immunizationRecommendationComponent.addDateCriterion();
+        dateCriterion.setCode(getCodeableConcept("30980-7", "Date vaccine due", null));
+        dateCriterion.setValue(date);
+
+        return immunizationRecommendation;
+    }
+
+    static DiagnosticReport getDiagnosticReport(Date date) {
+        DiagnosticReport diagnosticReport = new DiagnosticReport();
+        diagnosticReport.setId(UUID.randomUUID().toString());
+
+        DateTimeType dateTimeType = new DateTimeType();
+        dateTimeType.setValue(Utils.getFutureTime(date, 60));
+        diagnosticReport.setStatus(DiagnosticReport.DiagnosticReportStatus.FINAL);
+        diagnosticReport.setCode(FHIRUtils.getDiagnosticTestCode(SimpleDiagnosticTest.getRandomTest()));
+        diagnosticReport.setConclusion("Refer to Doctor. To be correlated with further study.");
+        return diagnosticReport;
     }
 
     static MedicationRequest createMedicationRequest(Practitioner author,

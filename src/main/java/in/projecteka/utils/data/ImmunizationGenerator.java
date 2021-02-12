@@ -1,8 +1,11 @@
 package in.projecteka.utils.data;
 
 import ca.uhn.fhir.context.FhirContext;
+import ca.uhn.fhir.parser.IParser;
 import in.projecteka.utils.DocRequest;
 import in.projecteka.utils.data.model.Doctor;
+import in.projecteka.utils.data.model.Obs;
+import in.projecteka.utils.data.model.SimpleCondition;
 import in.projecteka.utils.data.model.Vaccine;
 import org.hl7.fhir.r4.model.Bundle;
 import org.hl7.fhir.r4.model.CodeableConcept;
@@ -10,10 +13,12 @@ import org.hl7.fhir.r4.model.Composition;
 import org.hl7.fhir.r4.model.DocumentReference;
 import org.hl7.fhir.r4.model.Encounter;
 import org.hl7.fhir.r4.model.Immunization;
+import org.hl7.fhir.r4.model.Observation;
 import org.hl7.fhir.r4.model.Organization;
 import org.hl7.fhir.r4.model.Patient;
 import org.hl7.fhir.r4.model.Practitioner;
 import org.hl7.fhir.r4.model.Reference;
+import org.hl7.fhir.r4.model.Resource;
 import org.hl7.fhir.r4.model.ResourceType;
 
 import java.nio.file.Path;
@@ -32,7 +37,7 @@ public class ImmunizationGenerator implements DocumentGenerator {
     private Properties patients;
 
     public void init() throws Exception {
-        immunizationProps = Utils.loadFromFile("/immunization.properties");
+        immunizationProps = Utils.loadFromFile("/immunization-vaccines.properties");
         doctors = Utils.loadFromFile("/practitioners.properties");
         patients = Utils.loadFromFile("/patients.properties");
     }
@@ -42,7 +47,7 @@ public class ImmunizationGenerator implements DocumentGenerator {
         LocalDateTime dateTime = request.getFromDate().toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime();
         for (int i = 0; i < request.getNumber(); i++) {
             Date date = Utils.getNextDate(dateTime, i);
-            Bundle bundle = createImmunizationBundle(date, request.getPatientName(), request.getHipPrefix(), request.getPatientId());
+            Bundle bundle = createImmunizationBundle(date, request.getPatientName(), request.getHipPrefix(), request.getPatientId(), fhirContext.newJsonParser());
             String encodedString = fhirContext.newJsonParser().encodeResourceToString(bundle);
             List<Bundle.BundleEntryComponent> patientEntries =
                     bundle.getEntry().stream()
@@ -60,7 +65,7 @@ public class ImmunizationGenerator implements DocumentGenerator {
         }
     }
 
-    private Bundle createImmunizationBundle(Date date, String patientName, String hipPrefix, String patientId) throws Exception {
+    private Bundle createImmunizationBundle(Date date, String patientName, String hipPrefix, String patientId, IParser parser) throws Exception {
         Bundle bundle = FHIRUtils.createBundle(date, hipPrefix);
         Patient patientResource = FHIRUtils.getPatientResource(patientName, patientId, patients);
         Reference patientRef = createPatientReference(patientResource);
@@ -106,6 +111,31 @@ public class ImmunizationGenerator implements DocumentGenerator {
             FHIRUtils.addToBundleEntry(bundle, organization, true);
             immunization.setManufacturer(FHIRUtils.getReferenceToResource(organization));
 
+            //Reason reference
+            if(Utils.randomBool()) {
+                int randomReasonRefNumber = Utils.randomInt(1,2);
+                Resource reasonResource = FHIRUtils.createCondition(SimpleCondition.getRandomCondition(), date);
+
+                if(randomReasonRefNumber == 1){
+                    reasonResource = getObservation(parser);
+                }
+
+                if(randomReasonRefNumber == 2){
+                    var diagnosticReport = FHIRUtils.getDiagnosticReport(date);
+                    diagnosticReport.addResultsInterpreter(FHIRUtils.getReferenceToResource(author));
+                    reasonResource = diagnosticReport;
+                }
+
+                FHIRUtils.addToBundleEntry(bundle, reasonResource, false);
+                immunization.addReasonReference(FHIRUtils.getReferenceToResource(reasonResource));
+            }
+
+            if(Utils.randomBool()){
+                Observation observation = getObservation(parser);
+                FHIRUtils.addToBundleEntry(bundle, observation, false);
+                immunization.addReaction().setDetail(FHIRUtils.getReferenceToResource(observation));
+            }
+
             immunization.setPatient(patientRef);
             FHIRUtils.addToBundleEntry(bundle, immunization, false);
             section.getEntry().add(FHIRUtils.getReferenceToResource(immunization));
@@ -123,6 +153,12 @@ public class ImmunizationGenerator implements DocumentGenerator {
         Reference patientRef = new Reference();
         patientRef.setResource(patientResource);
         return patientRef;
+    }
+
+    private Observation getObservation(IParser parser) {
+        Observation observation = parser.parseResource(Observation.class, Obs.getObservationResString());
+        observation.setId(UUID.randomUUID().toString());
+        return observation;
     }
 
 }
