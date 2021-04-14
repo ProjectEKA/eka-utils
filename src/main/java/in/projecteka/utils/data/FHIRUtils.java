@@ -166,6 +166,14 @@ public class FHIRUtils {
         return type;
     }
 
+    public static CodeableConcept getWellnessRecordType() {
+        CodeableConcept type = new CodeableConcept();
+        Coding coding = type.addCoding();
+        coding.setSystem(Constants.EKA_SCT_SYSTEM);
+        coding.setDisplay("Wellness Record");
+        return type;
+    }
+
     static CodeableConcept getPrescriptionSectionType() {
         CodeableConcept prescriptionType = getPrescriptionType();
         prescriptionType.getCodingFirstRep().setDisplay("Prescription");
@@ -407,7 +415,7 @@ public class FHIRUtils {
         Attachment attachment = new Attachment();
         attachment.setTitle(title);
         attachment.setContentType("application/pdf");
-        attachment.setData(Utils.readFileContent("/sample-prescription-base64.txt"));
+        attachment.setData(Utils.readFileContent("/sample-surgical-report-base64.txt"));
         return attachment;
     }
 

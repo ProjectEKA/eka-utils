@@ -7,8 +7,10 @@ import org.hl7.fhir.r4.model.Bundle;
 import org.hl7.fhir.r4.model.CodeableConcept;
 import org.hl7.fhir.r4.model.Composition;
 import org.hl7.fhir.r4.model.DocumentReference;
+import org.hl7.fhir.r4.model.Encounter;
 import org.hl7.fhir.r4.model.Patient;
 import org.hl7.fhir.r4.model.Practitioner;
+import org.hl7.fhir.r4.model.Reference;
 import org.hl7.fhir.r4.model.ResourceType;
 
 import java.nio.file.Path;
@@ -57,6 +59,7 @@ public class HealthDocumentRecordGenerator implements DocumentGenerator {
     private Bundle createHealthDocumentRecordBundle(Date date, String patientName, String hipPrefix, String patientId) throws Exception {
         Bundle bundle = FHIRUtils.createBundle(date, hipPrefix);
         Patient patientResource = FHIRUtils.getPatientResource(patientName, patientId, patients);
+        Reference patientRef = createPatientReference(patientResource);
 
         Composition healthDocumentRecordDoc = new Composition();
         healthDocumentRecordDoc.setId(UUID.randomUUID().toString());
@@ -77,6 +80,11 @@ public class HealthDocumentRecordGenerator implements DocumentGenerator {
         FHIRUtils.addToBundleEntry(bundle, patientResource, false);
         healthDocumentRecordDoc.setSubject(FHIRUtils.getReferenceToPatient(patientResource));
 
+        Encounter encounter = FHIRUtils.createEncounter("Outpatient visit", "AMB", healthDocumentRecordDoc.getDate());
+        encounter.setSubject(patientRef);
+        FHIRUtils.addToBundleEntry(bundle, encounter, false);
+        healthDocumentRecordDoc.setEncounter(FHIRUtils.getReferenceToResource(encounter));
+
         Composition.SectionComponent section = healthDocumentRecordDoc.addSection();
         section.setTitle("Health Document Record");
         section.setCode(healthDocumentRecordType);
@@ -85,6 +93,12 @@ public class HealthDocumentRecordGenerator implements DocumentGenerator {
         section.getEntry().add(FHIRUtils.getReferenceToResource(docReference));
 
         return bundle;
+    }
+
+    private Reference createPatientReference(Patient patientResource) {
+        Reference patientRef = new Reference();
+        patientRef.setResource(patientResource);
+        return patientRef;
     }
 
 }

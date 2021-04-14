@@ -8,6 +8,7 @@ import in.projecteka.utils.data.ImmunizationGenerator;
 import in.projecteka.utils.data.OPConsultationGenerator;
 import in.projecteka.utils.data.PrescriptionGenerator;
 import in.projecteka.utils.data.Utils;
+import in.projecteka.utils.data.WellnessRecordGenerator;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -20,7 +21,7 @@ import java.util.List;
 import java.util.Map;
 
 public class Application {
-    private static final List<String> supportedTypes = Arrays.asList("PR", "DR", "OP", "DS", "IR", "HD");
+    private static final List<String> supportedTypes = Arrays.asList("PR", "DR", "OP", "DS", "IR", "HD", "WR");
     private static final Map<String, DocumentGenerator> generators = new HashMap<>() {{
         put("PR", new PrescriptionGenerator());
         put("DR", new DiagnosticReportGenerator());
@@ -28,6 +29,7 @@ public class Application {
         put("DS", new DischargeSummaryGenerator());
         put("IR", new ImmunizationGenerator());
         put("HD", new HealthDocumentRecordGenerator());
+        put("WR", new WellnessRecordGenerator());
     }};
 
     public static void main(String[] args) throws Exception {
@@ -92,7 +94,7 @@ public class Application {
                 return type.toUpperCase();
             }
         }
-        System.out.println("Please provide Type, possible values: PR, DR, OP, DS, IR, HD");
+        System.out.println("Please provide Type, possible values: PR, DR, OP, DS, IR, HD, WR");
         return null;
     }
 
