@@ -8,6 +8,7 @@ import in.projecteka.utils.data.model.Obs;
 import org.hl7.fhir.r4.model.Bundle;
 import org.hl7.fhir.r4.model.CodeableConcept;
 import org.hl7.fhir.r4.model.Composition;
+import org.hl7.fhir.r4.model.DocumentReference;
 import org.hl7.fhir.r4.model.Encounter;
 import org.hl7.fhir.r4.model.Observation;
 import org.hl7.fhir.r4.model.Patient;
@@ -25,7 +26,7 @@ import java.util.Properties;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-public class WellnessRecordGenerator implements DocumentGenerator{
+public class WellnessRecordGenerator implements DocumentGenerator {
     private Properties doctors;
     private Properties patients;
 
@@ -90,22 +91,33 @@ public class WellnessRecordGenerator implements DocumentGenerator{
         wellnessRecordDoc.setEncounter(FHIRUtils.getReferenceToResource(encounter));
 
         generateSections(jsonParser, bundle, wellnessRecordDoc);
+
+        Composition.SectionComponent section = wellnessRecordDoc.addSection();
+        section.setTitle("Document Reference");
+        DocumentReference docReference = FHIRUtils.getReportAsDocReference(author, "Surgical Pathology Report");
+        FHIRUtils.addToBundleEntry(bundle, docReference, false);
+        section.getEntry().add(FHIRUtils.getReferenceToResource(docReference));
         return bundle;
     }
 
-    protected void generateSections(IParser jsonParser, Bundle bundle, Composition wellnessRecDoc) {
+    private void generateSections(IParser jsonParser, Bundle bundle, Composition wellnessRecDoc) {
         createObservationVitalSignsSection(bundle, wellnessRecDoc, jsonParser);
         createObservationBodyMeasurementSection(bundle, wellnessRecDoc, jsonParser);
         createObservationGeneralAssessmentSection(bundle, wellnessRecDoc, jsonParser);
         createObservationPhysicalActivitySection(bundle, wellnessRecDoc, jsonParser);
         createObservationWomenHealthSection(bundle, wellnessRecDoc, jsonParser);
         createObservationLifestyleSection(bundle, wellnessRecDoc, jsonParser);
+        createDocumentReferenceSection(bundle, wellnessRecDoc, jsonParser);
     }
 
-    protected void createObservationVitalSignsSection(Bundle bundle, Composition composition, IParser parser) {
+    private void createDocumentReferenceSection(Bundle bundle, Composition wellnessRecDoc, IParser jsonParser) {
+
+    }
+
+    private void createObservationVitalSignsSection(Bundle bundle, Composition composition, IParser parser) {
         Composition.SectionComponent section = composition.addSection();
         section.setTitle("Vital Signs");
-        int numOfObs = Utils.randomInt(1,3);
+        int numOfObs = Utils.randomInt(1, 3);
         for (int i = 0; i < numOfObs; i++) {
             Observation observation = parser.parseResource(Observation.class, Obs.getVitalSignsObsResString());
             observation.setId(UUID.randomUUID().toString());
@@ -114,10 +126,10 @@ public class WellnessRecordGenerator implements DocumentGenerator{
         }
     }
 
-    protected void createObservationBodyMeasurementSection(Bundle bundle, Composition composition, IParser parser) {
+    private void createObservationBodyMeasurementSection(Bundle bundle, Composition composition, IParser parser) {
         Composition.SectionComponent section = composition.addSection();
         section.setTitle("Body Measurement");
-        int numOfObs = Utils.randomInt(1,3);
+        int numOfObs = Utils.randomInt(1, 3);
         for (int i = 0; i < numOfObs; i++) {
             Observation observation = parser.parseResource(Observation.class, Obs.getBodyMeasurementObsResString());
             observation.setId(UUID.randomUUID().toString());
@@ -126,10 +138,10 @@ public class WellnessRecordGenerator implements DocumentGenerator{
         }
     }
 
-    protected void createObservationPhysicalActivitySection(Bundle bundle, Composition composition, IParser parser) {
+    private void createObservationPhysicalActivitySection(Bundle bundle, Composition composition, IParser parser) {
         Composition.SectionComponent section = composition.addSection();
         section.setTitle("Physical Activity");
-        int numOfObs = Utils.randomInt(1,3);
+        int numOfObs = Utils.randomInt(1, 3);
         for (int i = 0; i < numOfObs; i++) {
             Observation observation = parser.parseResource(Observation.class, Obs.getPhysicalActivityObsResString());
             observation.setId(UUID.randomUUID().toString());
@@ -138,10 +150,10 @@ public class WellnessRecordGenerator implements DocumentGenerator{
         }
     }
 
-    protected void createObservationGeneralAssessmentSection(Bundle bundle, Composition composition, IParser parser) {
+    private void createObservationGeneralAssessmentSection(Bundle bundle, Composition composition, IParser parser) {
         Composition.SectionComponent section = composition.addSection();
         section.setTitle("General Assessment");
-        int numOfObs = Utils.randomInt(1,3);
+        int numOfObs = Utils.randomInt(1, 3);
         for (int i = 0; i < numOfObs; i++) {
             Observation observation = parser.parseResource(Observation.class, Obs.getGeneralAssessmentResString());
             observation.setId(UUID.randomUUID().toString());
@@ -150,10 +162,10 @@ public class WellnessRecordGenerator implements DocumentGenerator{
         }
     }
 
-    protected void createObservationWomenHealthSection(Bundle bundle, Composition composition, IParser parser) {
+    private void createObservationWomenHealthSection(Bundle bundle, Composition composition, IParser parser) {
         Composition.SectionComponent section = composition.addSection();
         section.setTitle("Women Health");
-        int numOfObs = Utils.randomInt(1,3);
+        int numOfObs = Utils.randomInt(1, 3);
         for (int i = 0; i < numOfObs; i++) {
             Observation observation = parser.parseResource(Observation.class, Obs.getWomenHealthObsResString());
             observation.setId(UUID.randomUUID().toString());
@@ -162,10 +174,10 @@ public class WellnessRecordGenerator implements DocumentGenerator{
         }
     }
 
-    protected void createObservationLifestyleSection(Bundle bundle, Composition composition, IParser parser) {
+    private void createObservationLifestyleSection(Bundle bundle, Composition composition, IParser parser) {
         Composition.SectionComponent section = composition.addSection();
         section.setTitle("Lifestyle");
-        int numOfObs = Utils.randomInt(1,3);
+        int numOfObs = Utils.randomInt(1, 3);
         for (int i = 0; i < numOfObs; i++) {
             Observation observation = parser.parseResource(Observation.class, Obs.getLifestyleObsResString());
             observation.setId(UUID.randomUUID().toString());
